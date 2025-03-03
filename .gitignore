@@ -1,0 +1,133 @@
+# General system files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+System Volume Information/
+
+# macOS
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100/
+.Trashes/
+*.swp
+*.swo
+
+# Windows
+ntuser.dat
+ntuser.dat.log
+NTUSER.DAT{*.regtrans-ms,*.TM.blf,*.TMContainer00000000000000000001.regtrans-ms}
+*.lnk
+*.bak
+
+# Linux
+*~
+.nfs*
+*.lock
+lost+found/
+
+# Git and IDE-specific files
+.git/
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# Java-specific files
+*.class
+*.jar
+*.war
+*.ear
+*.log
+*.jdm
+*.jpf
+*.hprof
+*.java~
+*.jws
+target/
+out/
+bin/
+
+# C and C++ build files
+*.o
+*.a
+*.so
+*.lo
+*.la
+*.dylib
+*.dll
+*.exe
+*.obj
+*.pch
+*.pdb
+*.ilk
+*.lib
+*.idb
+*.suo
+*.sdf
+*.ncb
+*.mode1v3
+*.mode2v3
+*.dep
+*.exp
+*.elf
+*.hex
+*.map
+*.lss
+*.lst
+*.sym
+*.d
+*.gcda
+*.gcno
+*.gcov
+*.tlog
+*.log
+*.dSYM/
+Debug/
+Release/
+build/
+CMakeFiles/
+CMakeCache.txt
+*.cmake
+*.vcxproj*
+*.xcodeproj*
+
+# Python-specific files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+venv/
+ENV/
+env/
+pip-wheel-metadata/
+*.egg
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Temporary and swap files
+*.swp
+*.swo
+*.tmp
+*.bak
+*.~*
+*.log
+*.lock
+*.pid
+*.seed
+
+# Package managers
+node_modules/
+.yarn/
+.yarn-cache/
+.pip-cache/
+.npm/
+.bower/
+cargo-lock.json
