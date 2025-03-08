@@ -1,7 +1,7 @@
 /* 
  * CSC 225 - Assignment 3
- * Name: 
- * Student number:
+ * Name: Felix Safieh
+ * Student number: V00962305
  */
  
 /* 
@@ -15,13 +15,30 @@ import java.util.*;
 public class OddEquality {
     
     static boolean oddEqual(int[] a, int[] b){
-  
-        
-        /*
-         Your recusive solution goes here.   
-         */
-        
+		return recursive_oddEqual(a, b, 0, 0, a.length); // call rec fn to solve
     }
+
+	// Once we have an odd sized array compare all elements and return true if all indices equal
+	static boolean recursive_oddEqual(int[] a, int [] b, int a_offset, int b_offset, int length){
+		if(length%2 != 0){
+			for (int i = 0; i < length; i++) {
+				if(a[i+a_offset]!=b[i+b_offset]){
+					return false;
+				}	
+			}	
+			return true;
+		}
+		
+		int new_length = length / 2; // updates the new lengths to half of the original
+
+		
+		return (recursive_oddEqual(a, b, a_offset, b_offset, new_length) && //checks a1/b1 and a2/b2 by offsetting the starting index
+		recursive_oddEqual(a, b, a_offset + new_length, b_offset + new_length, new_length)) || 
+	   (recursive_oddEqual(a, b, a_offset, b_offset, new_length) && // or checks for a1/a2 and a1/b2
+		recursive_oddEqual(a, b, a_offset, b_offset+new_length, new_length)) ||
+		(recursive_oddEqual(a, b, a_offset+new_length, b_offset, new_length) && //checks for a2/b1 and a2/b2
+		recursive_oddEqual(a, b, a_offset+new_length, b_offset+new_length, new_length));
+	}
     
     public static void main(String[] args) {
     /* Read input from STDIN. Print output to STDOUT. Your class should be named OddEquality. 
