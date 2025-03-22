@@ -1,14 +1,16 @@
 ;
 ; lab6.asm
 ;
-.include "m2560def.inc"
-
+.include "m2560def.inc" ; imports definitions to be used
 ;SPH, SPL etc are defined in "m2560def.inc"
 
-	; initialize the stack pointer
+	
 .cseg
-
-	ldi r16, 0xFF
+	
+	; initialize the stack pointer 
+	; to the address 0x21FF - the top of SRAM
+	; The stack will grow downward from here
+	ldi r16, 0xFF 
 	out SPL, r16
 	ldi r16, 0x21
 	out SPH, r16
@@ -16,21 +18,21 @@
 	;example of passing parameter by reference	
 	;call subroutine void strcpy(src, dest)
 	;push 1st parameter - src address
-	ldi r16, high(src << 1)
-	push r16
+	ldi r16, high(src << 1) ; since src is in program memory, use <<1 (word-addressed)
+	push r16 ;push the value to the stack
 	ldi r16, low(src <<1)
 	push r16
 
 	;push 2nd parameter - dest address
-	ldi r16, high(dest)
+	ldi r16, high(dest) ; RAM address is byte addressed so no (<<1) needed
 	push r16
 	ldi r16, low(dest)
 	push r16
 
-	call strcpy
-	pop ZL
-	pop ZH
-	pop r16
+	call strcpy ; call auto pushes 3 bytes for the return address to the stack
+	pop ZL ; Pop the destination address
+	pop ZH 
+	pop r16 ; R16 used as scratch to clear ret address from stack
 	pop r16
 
 	;Write your code here: call subroutine int strlen(string dest)

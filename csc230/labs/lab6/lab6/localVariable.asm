@@ -47,7 +47,7 @@ done: rjmp done
 ; | locL | reserved byte to store low byte of a number  (Y + 1)
 ; |      | <- Y and SP
 ;
-factorial:
+factorial: 
 		push YH
 		push YL
 		push n
