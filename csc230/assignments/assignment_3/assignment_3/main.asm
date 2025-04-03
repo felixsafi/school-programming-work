@@ -7,6 +7,6 @@
 
 
 ; Replace with your application code
-start:
-    inc r16
-    rjmp start
+.cseg
+.org 0
+	jmp start

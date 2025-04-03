@@ -3,11 +3,48 @@
 
 .cseg
 
-	call lcd_init			; call lcd_init to Initialize the LCD
+start:
+	rcall lcd_init			; call lcd_init to Initialize the LCD
+
+	ldi r17, high(7800)
+	ldi r16, low(7800)
+	sts OCR1AH, r17
+	sts OCR1AL, r16
+
+	ldi r16, 0
+	sts TCCR1A, r16
+
+	ldi r16, (1 << WGM12) | (1 << CS12) | (1 << CS10)
+	sts TCCR1B, r16
+
+	ldi r16, (1 << OCIE1A)
+	sts TIMSK1, r16
+	sei
+
 	call init_strings
 	call display_strings
 
-lp:	jmp lp
+	;add function where bottom is off
+
+	;add function where top is off
+
+
+blink_loop:
+	;figure out the (row, column) of '!' and make a change
+	ldi r16, 0 ; <- TODO: change the row
+	ldi r17, 0 ; <- TODO: change the column
+	push r16
+	push r17
+	rcall lcd_gotoxy
+	pop r17
+	pop r16
+
+	lds r16, CHAR_ONE
+	push r16
+	rcall lcd_putchar
+	pop r16
+
+	rjmp blink_loop
 
 
 init_strings:
@@ -97,9 +134,21 @@ display_strings:
 	pop r16
 	ret
 
-msg1_p:	.db "Line 1", 0	
-msg2_p: .db "Line 2", 0
+change_which_is_off_isr:
+	;how many registers you are going to use?
+	;preserve the values on the stack
+	;also save the status register
 
+	;read CHAR_ONE into, say, r16 and 
+	;read CHAR_TWO into, say r17
+	;store r16 in CHAR_TWO
+	;store r17 in CHAR_ONE <- now, they are swapped
+
+	;restore the status register and the registers that you used
+	reti
+
+msg1_p:	.db "Felix Safieh", 0	
+msg2_p: .db "CSC 230: Spring 2025", 0
 .dseg
 ;
 ; The program copies the strings from program memory
