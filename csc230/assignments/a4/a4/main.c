@@ -77,8 +77,7 @@ int main( void )
 	int sw_on_copy = 0;
 	
 	lcd_init(); // initialize the LCD Screen
-	set_initial_screen();
-	//update_screen("00:00:00.000   ", 0); //set top and bottom screens to 0
+	set_initial_screen(); //update_screen("00:00:00.000   ", 0); //set top and bottom screens to 0
 	cli();
 	timer_init(); //set up and start the timer
 	ADMUX = 0x40;   // Select ADC0 (A0), AVcc reference
@@ -116,28 +115,9 @@ int main( void )
 	}
 }
 
-
 /**
- * @brief Updates main timer on the LCD
- *
- * @param current_time - string via char pointer	
- * @param sw_on - if true row 2 time is paused, sync times if false
+ * @brief set up the buttons
  */
-
-// void print_time() {
-// 	lcd_xy(row, 0);
-// 	for (int i = NUMBER_OF_TIME_VALS_TRACKED - 1; i >= 0; i--) {
-// 		int value = time_values[i][VALUE_INDEX];
-// 		int digits = time_values[i][2];
-// 
-// 		for (int d = digits - 1; d >= 0; d--) {
-// 			uint8_t digit = (value / power_of_10(d)) % 10;
-// 			lcd_putchar(digit + 48);
-// 		}
-// 
-// 		if (i >= 2) lcd_putchar(':');
-// 		else if (i == 1) lcd_putchar('.');
-// 	}
 void check_button() {
 	static uint8_t last_state = 0;
 	uint8_t current = select_button_pressed();
@@ -147,13 +127,13 @@ void check_button() {
 	last_state = current;
 }	
 uint16_t read_adc() {
-	ADCSRA |= (1 << ADSC);         // Start conversion
-	while (ADCSRA & (1 << ADSC));  // Wait until complete
-	return ADC;                    // Read 10-bit result
+	ADCSRA |= (1 << ADSC); // Start convert
+	while (ADCSRA & (1 << ADSC)); //Wait 
+	return ADC; //Ret result
 }
 uint8_t select_button_pressed() {
 	uint16_t val = read_adc();
-	return (val < 790 && val >= 555);  // Only SELECT button
+	return (val < 790 && val >= 555);//SELECT button
 }
 
 
@@ -204,12 +184,9 @@ void set_initial_screen(){
 void timer_init(){
 	//TODO: add setup for the millisecond timer
 	TCCR1A = 0;
-	TCCR1B = (1 << WGM12);  // CTC mode
-	OCR1A = 249;            // 1ms at 16MHz with /64 prescaler (16,000,000 / 64 / 1000 = 250 - 1)
-	TIMSK1 |= (1 << OCIE1A); // Enable compare match A interrupt
-	TCCR1B |= (1 << CS11) | (1 << CS10); // Start timer with /64 prescaler
+	TCCR1B = (1 << WGM12);  //CTC mode
+	OCR1A = 249;            // 1ms at 16MHz with 64 prescale
+	TIMSK1 |= (1 << OCIE1A); // Enable compare match interrupt
+	TCCR1B |= (1 << CS11) | (1 << CS10); //Start timer
 }
 
-/**
- * @brief set up the buttons
- */
