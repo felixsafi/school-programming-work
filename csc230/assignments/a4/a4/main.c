@@ -26,14 +26,19 @@
 #define ROWS_ON_SCREEN 2
 
 volatile uint16_t subsecond_vtl_counter = 0; 
-volatile uint8_t sw_status = 0; ///< bool for tracking if sw is on
+volatile uint8_t sw_status = 1; ///< bool for tracking if sw is on
 
 //:.:.:.|Function Prototypes|.:.:.:
+//button setup
+void adc_init();
+void check_button();
+uint16_t read_adc();
+uint8_t select_button_pressed();
+//other
 void timer_init();
 void set_initial_screen();
 void convert_num_to_char_array(const int *timer_val, const int *chars_to_display, char *formatted_display_values, const int *powers_of_ten);
 void update_screen(const char *char_array, const int *length, const int *sw_val, const int *x_axis_location);
-// void button_init();
 
 //:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.
 //--> | ISRs |------------------------------------------------
@@ -76,9 +81,13 @@ int main( void )
 	//update_screen("00:00:00.000   ", 0); //set top and bottom screens to 0
 	cli();
 	timer_init(); //set up and start the timer
+	ADMUX = 0x40;   // Select ADC0 (A0), AVcc reference
+	ADCSRA = 0x87;  // ADC enable, prescaler 128
 	sei();
 	
 	while(1){ 
+		check_button();
+		
 		cli();//stop interrupts while updating the values
 		sw_on_copy = sw_status; //copy this value to use while interrupts are off, it will be used later
 		timer_values[0] = subsecond_vtl_counter;
@@ -129,7 +138,24 @@ int main( void )
 // 		if (i >= 2) lcd_putchar(':');
 // 		else if (i == 1) lcd_putchar('.');
 // 	}
-	
+void check_button() {
+	static uint8_t last_state = 0;
+	uint8_t current = select_button_pressed();
+	if (current && !last_state) {
+		sw_status = !sw_status;
+	}
+	last_state = current;
+}	
+uint16_t read_adc() {
+	ADCSRA |= (1 << ADSC);         // Start conversion
+	while (ADCSRA & (1 << ADSC));  // Wait until complete
+	return ADC;                    // Read 10-bit result
+}
+uint8_t select_button_pressed() {
+	uint16_t val = read_adc();
+	return (val < 790 && val >= 555);  // Only SELECT button
+}
+
 
 
 void update_screen(const char *char_array, const int *length, const int *sw_val, const int *x_axis_location){
@@ -187,4 +213,3 @@ void timer_init(){
 /**
  * @brief set up the buttons
  */
-//void button_init
