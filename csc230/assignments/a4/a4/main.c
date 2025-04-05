@@ -23,34 +23,33 @@
 //:.:.:.|Defines / Global Variables|.:.:.:
 #define NUMBER_OF_TIME_VALS_TRACKED 4 // How many units are used to track time
 #define LENGTH_OF_SCREEN 16 //how many chars fit on the screen
-#define MAX_CHAR_PER_VAL 3 //max number of characters used to display any time value
-#define VALUE_INDEX 0 //where in the values array the actual count value is stored
-#define OVF_INDEX 1 //where in the values array the overflow value is stored
+#define ROWS_ON_SCREEN 2
 
-volatile uint16_t smallest_counter = 0; ///< (1/100) of a second timer
+volatile uint16_t subsecond_vtl_counter = 0; 
 volatile uint8_t sw_status = 0; ///< bool for tracking if sw is on
 
 //:.:.:.|Function Prototypes|.:.:.:
 void timer_init();
-void update_screen(char* current_time, int sw_on); 
-void generate_time_string(int time_values[NUMBER_OF_TIME_VALS_TRACKED][3], char* string_to_update);
+void set_initial_screen();
+void convert_num_to_char_array(const int *timer_val, const int *chars_to_display, char *formatted_display_values, const int *powers_of_ten);
+void update_screen(const char *char_array, const int *length, const int *sw_val, const int *x_axis_location);
 // void button_init();
 
 //:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.
 //--> | ISRs |------------------------------------------------
 //:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.
 /**
- * @brief ISR that updated "smallest_counter" on timer interrupt
+ * @brief ISR that updated "subsecond_vtl_counter" on timer interrupt
  */
 ISR(TIMER1_COMPA_vect){
-	smallest_counter++;
+	subsecond_vtl_counter++;
 }
 
 /**
  * @brief ISR that updates the status of the stopwatch
  */
  ISR(PCINT0_vect){
- 	sw_status = 1; //flip status when button pressed
+ 	sw_status = !sw_status; //flip status when button pressed
  }
 
 //:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.
@@ -60,20 +59,20 @@ ISR(TIMER1_COMPA_vect){
 int main( void )
 {
 	DDRL = 0xFF; //#Debug
+	//saved variables	
+	int last_index = NUMBER_OF_TIME_VALS_TRACKED-1;
 	
-	//main time values array
-	//no logic for it but if chars to display exceeded the screen size would need to accommodate with scrolling or something
-	int time_values[NUMBER_OF_TIME_VALS_TRACKED][3]={
-			{0, 1000, 3}, //ms            -> initialized: 0, overflow: 100 ms    , chars to display: 3
-			{0, 60, 2},   //seconds      -> initialized: 0, overflow: 60 seconds, chars to display: 2
-			{0, 60, 2},   //minutes      -> initialized: 0, overflow: 60 minutes, chars to display: 2
-			{0, 60, 2},   //hours        -> initialized: 0, overflow: 60 hours,   chars to display: 2
-	};//{xx,yy, z}  //<unit>        -> initialized: xx,overflow: yy <units>, chars to display:<z (where z is at most MAX_CHARS_PER_VALUE> 
+	int timer_values[NUMBER_OF_TIME_VALS_TRACKED] = {0, 0, 0, 0};
+	int timer_overflow_values[NUMBER_OF_TIME_VALS_TRACKED] = {1000, 60, 60, 60};
+	int number_of_digits_for_values[NUMBER_OF_TIME_VALS_TRACKED] = {3, 2, 2, 2};
+	int screen_location_of_values[NUMBER_OF_TIME_VALS_TRACKED] = {9,6,3,0};
+		
+	int pow_of_ten[NUMBER_OF_TIME_VALS_TRACKED] = {1,10,100,1000};
+		
+	int sw_on_copy = 0;
 	
-	char current_time_string[LENGTH_OF_SCREEN+1];///< char array holding all digits of the screen plus null term
-	int last_index = NUMBER_OF_TIME_VALS_TRACKED-1; //used enough to make a variable
-
 	lcd_init(); // initialize the LCD Screen
+	set_initial_screen();
 	//update_screen("00:00:00.000   ", 0); //set top and bottom screens to 0
 	cli();
 	timer_init(); //set up and start the timer
@@ -81,59 +80,33 @@ int main( void )
 	
 	while(1){ 
 		cli();//stop interrupts while updating the values
-		int sw_on_copy = sw_status; //copy this value to use while interrupts are off, it will be used later
-		int mseconds = smallest_counter;
+		sw_on_copy = sw_status; //copy this value to use while interrupts are off, it will be used later
+		timer_values[0] = subsecond_vtl_counter;
+		subsecond_vtl_counter = subsecond_vtl_counter%1000;
 		sei(); //resume 	
-		
-		if (mseconds>=1000){
-			//reset the counter
-			cli();
-			smallest_counter = 0;
-			sei();
-		}
-		
-			time_values[0][0]++;
 
-
-		//If counter value is equal to or exceeding the buffer (1000 in this case)			
-			int i=0; //counter
-			while (i<(last_index-1)){
-			//for number of tracked values minus the last one go through each one
-				
-				if(time_values[i][VALUE_INDEX]>=time_values[i][OVF_INDEX]){
-				//if said value equals or exceeds the overflow number set in the array at [i][1]
-					
-						time_values[i+1][VALUE_INDEX]++; //add one to next place value
-						time_values[i][VALUE_INDEX]=0; //reset the overflowed value to 0
-						
-						switch (i){
-							case 1:
-								PORTL=0x10;
-								break;
-							case 2:
-								PORTL=0xA0;
-								break;
-							default:
-								PORTL=0x00;
-						}		
-				}
-				else{
-					break; //early exit if you get to a place value which doesn't overflow, since no other ones would after
-				}
-				i++;
-			}
+		for (int i=0; i<=last_index; i++){
+		//for each place value tracked
+			char temp_array[number_of_digits_for_values[i]];
+			convert_num_to_char_array(&timer_values[i], &number_of_digits_for_values[i], temp_array, pow_of_ten);
 			
-			if(time_values[last_index][VALUE_INDEX]>=time_values[last_index][OVF_INDEX]){
-			//error check for if the final place value overflows just reset it to 0
-					
-				time_values[last_index][VALUE_INDEX]=0;
-			}
-			
-			generate_time_string(time_values, current_time_string);
-			update_screen(current_time_string, sw_on_copy); //pushes the update to the screen
+			if(timer_values[i]>=timer_overflow_values[i]){
+			//zeros the current place value being looked at, and increments the next, if overflow occurs
 				
+				//safety check for hours overflow. Just mods the total hours by val
+				timer_values[i]=timer_values[i]%timer_overflow_values[i];
+				if(i!=last_index) timer_values[i+1]++;	
+			}
+			else{ 
+			//if no overflow happens update the screen then break, as no larger p.v will have changed
+				update_screen(temp_array, &number_of_digits_for_values[i], &sw_on_copy, &screen_location_of_values[i]);
+				break;
+			}
+			update_screen(temp_array, &number_of_digits_for_values[i], &sw_on_copy, &screen_location_of_values[i]);
+		}			
 	}
 }
+
 
 /**
  * @brief Updates main timer on the LCD
@@ -141,40 +114,63 @@ int main( void )
  * @param current_time - string via char pointer	
  * @param sw_on - if true row 2 time is paused, sync times if false
  */
-void update_screen(char* current_time, int sw_on){
-	lcd_xy(0, 0); ///< Move cursor to the top left
-	lcd_puts(current_time); ///< update the current time elapsed
-	if(!sw_on){
-		lcd_xy(1,0); ///< Move cursor to the top left
-		lcd_puts(current_time); ///< update the stopwatch time
+
+// void print_time() {
+// 	lcd_xy(row, 0);
+// 	for (int i = NUMBER_OF_TIME_VALS_TRACKED - 1; i >= 0; i--) {
+// 		int value = time_values[i][VALUE_INDEX];
+// 		int digits = time_values[i][2];
+// 
+// 		for (int d = digits - 1; d >= 0; d--) {
+// 			uint8_t digit = (value / power_of_10(d)) % 10;
+// 			lcd_putchar(digit + 48);
+// 		}
+// 
+// 		if (i >= 2) lcd_putchar(':');
+// 		else if (i == 1) lcd_putchar('.');
+// 	}
+	
+
+
+void update_screen(const char *char_array, const int *length, const int *sw_val, const int *x_axis_location){
+	int rows_to_print = (!*sw_val); //evaluates to 0 if sw on and 1 if sw off
+	int x = *x_axis_location;
+
+	for(int j=0; j<*length; j++){
+	//update each char based on how many there is to display
+		for(int i=0; i<=rows_to_print; i++){
+		//runs for row 0 if sw on and both if sw is off
+			lcd_xy(x, i);
+			lcd_putchar(char_array[j]);
+		}
+		x++;
 	}
 }
 
-/**
- * @brief Updates main timer on the LCD
- *
- * @param current_time - string via char pointer	
- * @param sw_on - if true row 2 time is paused, sync times if false
- */
-void generate_time_string(int time_values[NUMBER_OF_TIME_VALS_TRACKED][3], char* string_to_update){
-	/*
-	char* pointer_to_str = string_to_update;
-	for(int i=NUMBER_OF_TIME_VALS_TRACKED-1; i>=0; i--){
-	//for each value append it to the string to return - go backwards so starts from largest unit                   
-		pointer_to_str += sprintf(pointer_to_str, "%0*d", time_values[i][2], time_values[i][VALUE_INDEX]);
-		if (i >= 2){
-			 *pointer_to_str++ = ':'; //add : after every val down to seconds
-		}
-		else if (i==1) *pointer_to_str++ = '.'; //makes it seconds.ms
+void convert_num_to_char_array(const int *timer_val, const int *chars_to_display, char *formatted_display_values, const int *powers_of_ten){
+	for(int i = 0; i<*chars_to_display; i++){
+		formatted_display_values[i] = '0' + (*timer_val / powers_of_ten[(*chars_to_display-1)-i]) % 10; 
 	}
-	*pointer_to_str = '\0';
-	*/
-	string_to_update = "000000";
 }
 
 //:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.
 //--> | Initializing |----------------------------------------
 //:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.:.
+
+/**
+ * @brief sets the screen to all zeros adds ":" and "." in correct place
+ */
+void set_initial_screen(){
+	for(int i=0; i<ROWS_ON_SCREEN; i++){
+		for(int j=0; j<12; j++){	
+			lcd_xy(j,i);
+			
+			if(j==2||j==5)lcd_putchar(':'); //add the ":"s
+			else if(j==8) lcd_putchar('.'); //add the "."
+			else lcd_putchar('0');	//add the "0"s
+		}
+	}
+}
 
 /**
  * @brief Start the timer for milliseconds
